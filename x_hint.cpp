@@ -31,7 +31,7 @@
 #define VERSION "0.1"
 
 // define hint duration
-#define HINT_DURARTION 2.0f
+#define HINT_DURARTION 1.0f
 
 // global dataref variables
 static XPLMDataRef barometerSettingInHgPilotDataRef = NULL, barometerSettingInHgCopilotDataRef = NULL, nav1ObsDegMagPilotDataRef = NULL, nav2ObsDegMagPilotDataRef = NULL, nav1ObsDegMagCopilotDataRef = NULL, nav2ObsDegMagCopilotDataRef = NULL;
@@ -46,9 +46,9 @@ static void DisplayBarometerHint(float barometerSettingInHg)
     lastHintTime = XPLMGetElapsedTime();
 }
 
-static void DisplayObsHint(float obs)
+static void DisplayObsHint(float obsDegMag)
 {
-    sprintf(hintText, "%.0f DEG", obs);
+    sprintf(hintText, "%d DEG", ((int) obsDegMag + 3600) % 360);
     lastHintTime = XPLMGetElapsedTime();
 }
 
@@ -68,6 +68,14 @@ static float FlightLoopCallback(float inElapsedSinceLastCall, float inElapsedTim
         DisplayBarometerHint(barometerSettingInHgCopilot);
     else if (lastBarometerSettingInHgCopilot != 0 && barometerSettingInHgCopilot != lastBarometerSettingInHgCopilot)
         DisplayBarometerHint(barometerSettingInHgCopilot);
+    else if (lastNav1ObsDegMagPilot != 0 && nav1ObsDegMagPilot != lastNav1ObsDegMagPilot)
+        DisplayObsHint(nav1ObsDegMagPilot);
+    else if (lastNav2ObsDegMagPilot != 0 && nav2ObsDegMagPilot != lastNav2ObsDegMagPilot)
+        DisplayObsHint(nav2ObsDegMagPilot);
+    else if (lastNav1ObsDegMagCopilot != 0 && nav1ObsDegMagCopilot != lastNav1ObsDegMagCopilot)
+        DisplayObsHint(nav1ObsDegMagCopilot);
+    else if (lastNav2ObsDegMagCopilot != 0 && nav2ObsDegMagCopilot != lastNav2ObsDegMagCopilot)
+        DisplayObsHint(nav2ObsDegMagCopilot);
 
     lastBarometerSettingInHgPilot = barometerSettingInHgPilot;
     lastBarometerSettingInHgCopilot = barometerSettingInHgCopilot;
@@ -87,7 +95,7 @@ static int DrawCallback(XPLMDrawingPhase inPhase, int inIsBefore, void *inRefcon
         float color[] = { 1.0f, 1.0f, 1.0f };
         int x = 0, y = 0;
         XPLMGetMouseLocation(&x, &y);
-        XPLMDrawString(color, x - 25, y - 25, hintText, NULL, xplmFont_Basic);
+        XPLMDrawString(color, x, y - 30, hintText, NULL, xplmFont_Basic);
     }
 }
 
