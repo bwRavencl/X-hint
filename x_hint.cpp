@@ -28,6 +28,7 @@
 #include <math.h>
 #include <stdio.h>
 #include <string.h>
+#endif
 #if IBM
 #include <windows.h>
 #elif LIN
@@ -40,9 +41,6 @@
 
 // define version
 #define VERSION "0.1"
-
-// define the max interval between a mouse click and the resulting change of value of the manipulated dataref
-#define MOUSE_CLICK_INTERVAL 0.01f
 
 // define hint duration
 #define HINT_DURATION 1.0f
@@ -184,13 +182,15 @@ static int DrawCallback(XPLMDrawingPhase inPhase, int inIsBefore, void *inRefcon
 {
     float currentTime = XPLMGetElapsedTime();
 
-    if ((currentTime - lastMouseClickTime <= MOUSE_CLICK_INTERVAL || isPluginEnabled(XP_SCROLL_WHEEL_PLUGIN_SIGNATURE) != 0) && currentTime - lastHintTime <= HINT_DURATION)
+    if ((currentTime - lastMouseClickTime <= HINT_DURATION || isPluginEnabled(XP_SCROLL_WHEEL_PLUGIN_SIGNATURE) != 0) && currentTime - lastHintTime <= HINT_DURATION)
     {
         float color[] = { 1.0f, 1.0f, 1.0f };
         int x = 0, y = 0;
         XPLMGetMouseLocation(&x, &y);
         XPLMDrawString(color, x, y - 40, hintText, NULL, xplmFont_Basic);
     }
+
+    return 1;
 }
 
 PLUGIN_API int XPluginStart(char *outName, char *outSig, char *outDesc)
