@@ -21,12 +21,16 @@
 #include "XPLMPlugin.h"
 #include "XPLMProcessing.h"
 
+#if APL
+#include "ApplicationServices/ApplicationServices.h"
+#else
 #include <limits.h>
 #include <math.h>
 #include <stdio.h>
 #include <string.h>
-
-#if LIN
+#if IBM
+#include <windows.h>
+#elif LIN
 #include <X11/Xlib.h>
 #endif
 
