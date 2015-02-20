@@ -49,10 +49,10 @@
 #define XP_SCROLL_WHEEL_PLUGIN_SIGNATURE "thranda.window.scrollwheel"
 
 // global dataref variables
-static XPLMDataRef dgDriftVacDegDataRef = NULL, dgDriftEleDegDataRef = NULL, dgDriftVac2DegDataRef = NULL, dgDriftEle2DegDataRef = NULL, headingDialDegMagPilotDataRef = NULL, headingDialDegMagCopilotDataRef = NULL, barometerSettingInHgPilotDataRef = NULL, barometerSettingInHgCopilotDataRef = NULL, adf1CardHeadingDegMagPilotDataRef = NULL, adf2CardHeadingDegMagPilotDataRef = NULL, adf1CardHeadingDegMagCopilotDataRef = NULL, adf2CardHeadingDegMagCopilotDataRef = NULL, nav1ObsDegMagPilotDataRef = NULL, nav2ObsDegMagPilotDataRef = NULL, nav1ObsDegMagCopilotDataRef = NULL, nav2ObsDegMagCopilotDataRef = NULL;
+static XPLMDataRef dgDriftVacDegDataRef = NULL, dgDriftEleDegDataRef = NULL, dgDriftVac2DegDataRef = NULL, dgDriftEle2DegDataRef = NULL, headingDialDegMagPilotDataRef = NULL, headingDialDegMagCopilotDataRef = NULL, barometerSettingInHgPilotDataRef = NULL, barometerSettingInHgCopilotDataRef = NULL, adf1CardHeadingDegMagPilotDataRef = NULL, adf2CardHeadingDegMagPilotDataRef = NULL, adf1CardHeadingDegMagCopilotDataRef = NULL, adf2CardHeadingDegMagCopilotDataRef = NULL, hsiObsDegMagPilotDataRef = NULL, hsiObsDegMagCopilotDataRef = NULL, nav1ObsDegMagPilotDataRef = NULL, nav2ObsDegMagPilotDataRef = NULL, nav1ObsDegMagCopilotDataRef = NULL, nav2ObsDegMagCopilotDataRef = NULL;
 
 // global internal variables
-static float lastMouseClickTime = 0.0f, lastHintTime = 0.0f, lastDgDriftVacDeg = INT_MAX, lastDgDriftEleDeg = INT_MAX, lastDgDriftVac2Deg = INT_MAX, lastDgDriftEle2Deg = INT_MAX, lastHeadingDialDegMagPilot = INT_MAX, lastHeadingDialDegMagCopilot = INT_MAX, lastBarometerSettingInHgPilot = INT_MAX, lastBarometerSettingInHgCopilot = INT_MAX, lastAdf1CardHeadingDegMagPilot = INT_MAX, lastAdf2CardHeadingDegMagPilot = INT_MAX, lastAdf1CardHeadingDegMagCopilot = INT_MAX, lastAdf2CardHeadingDegMagCopilot = INT_MAX, lastNav1ObsDegMagPilot = INT_MAX, lastNav2ObsDegMagPilot = INT_MAX, lastNav1ObsDegMagCopilot = INT_MAX, lastNav2ObsDegMagCopilot = INT_MAX;
+static float lastMouseClickTime = 0.0f, lastHintTime = 0.0f, lastDgDriftVacDeg = INT_MAX, lastDgDriftEleDeg = INT_MAX, lastDgDriftVac2Deg = INT_MAX, lastDgDriftEle2Deg = INT_MAX, lastHeadingDialDegMagPilot = INT_MAX, lastHeadingDialDegMagCopilot = INT_MAX, lastBarometerSettingInHgPilot = INT_MAX, lastBarometerSettingInHgCopilot = INT_MAX, lastAdf1CardHeadingDegMagPilot = INT_MAX, lastAdf2CardHeadingDegMagPilot = INT_MAX, lastAdf1CardHeadingDegMagCopilot = INT_MAX, lastAdf2CardHeadingDegMagCopilot = INT_MAX, lastHsiObsDegMagPilot = INT_MAX, lastHsiObsDegMagCopilot = INT_MAX, lastNav1ObsDegMagPilot = INT_MAX, lastNav2ObsDegMagPilot = INT_MAX, lastNav1ObsDegMagCopilot = INT_MAX, lastNav2ObsDegMagCopilot = INT_MAX;
 static char hintText[32];
 #if LIN
 static Display *display = NULL;
@@ -125,6 +125,8 @@ static float FlightLoopCallback(float inElapsedSinceLastCall, float inElapsedTim
     float adf2CardHeadingDegMagPilot= XPLMGetDataf(adf2CardHeadingDegMagPilotDataRef);
     float adf1CardHeadingDegMagCopilot= XPLMGetDataf(adf1CardHeadingDegMagCopilotDataRef);
     float adf2CardHeadingDegMagCopilot= XPLMGetDataf(adf2CardHeadingDegMagCopilotDataRef);
+    float hsiObsDegMagPilot = XPLMGetDataf(hsiObsDegMagPilotDataRef);
+    float hsiObsDegMagCopilot = XPLMGetDataf(hsiObsDegMagCopilotDataRef);
     float nav1ObsDegMagPilot = XPLMGetDataf(nav1ObsDegMagPilotDataRef);
     float nav2ObsDegMagPilot = XPLMGetDataf(nav2ObsDegMagPilotDataRef);
     float nav1ObsDegMagCopilot = XPLMGetDataf(nav1ObsDegMagCopilotDataRef);
@@ -156,6 +158,10 @@ static float FlightLoopCallback(float inElapsedSinceLastCall, float inElapsedTim
         DisplayHeadingHint(adf1CardHeadingDegMagCopilot);
     else if (lastAdf2CardHeadingDegMagCopilot != INT_MAX && adf2CardHeadingDegMagCopilot != lastAdf2CardHeadingDegMagCopilot)
         DisplayHeadingHint(adf2CardHeadingDegMagCopilot);
+    else if (lastHsiObsDegMagPilot != INT_MAX && hsiObsDegMagPilot != lastHsiObsDegMagPilot)
+        DisplayHeadingHint(hsiObsDegMagPilot);
+    else if (lastHsiObsDegMagCopilot != INT_MAX && hsiObsDegMagCopilot != lastHsiObsDegMagCopilot)
+        DisplayHeadingHint(hsiObsDegMagCopilot);
     else if (lastNav1ObsDegMagPilot != INT_MAX && nav1ObsDegMagPilot != lastNav1ObsDegMagPilot)
         DisplayHeadingHint(nav1ObsDegMagPilot);
     else if (lastNav2ObsDegMagPilot != INT_MAX && nav2ObsDegMagPilot != lastNav2ObsDegMagPilot)
@@ -177,6 +183,8 @@ static float FlightLoopCallback(float inElapsedSinceLastCall, float inElapsedTim
     lastAdf2CardHeadingDegMagPilot = adf2CardHeadingDegMagPilot;
     lastAdf1CardHeadingDegMagCopilot = adf1CardHeadingDegMagCopilot;
     lastAdf2CardHeadingDegMagCopilot = adf2CardHeadingDegMagCopilot;
+    lastHsiObsDegMagPilot = hsiObsDegMagPilot;
+    lastHsiObsDegMagCopilot = hsiObsDegMagCopilot;
     lastNav1ObsDegMagPilot = nav1ObsDegMagPilot;
     lastNav2ObsDegMagPilot = nav2ObsDegMagPilot;
     lastNav1ObsDegMagCopilot = nav1ObsDegMagCopilot;
@@ -229,6 +237,8 @@ PLUGIN_API int XPluginStart(char *outName, char *outSig, char *outDesc)
     adf2CardHeadingDegMagPilotDataRef = XPLMFindDataRef("sim/cockpit2/radios/actuators/adf2_card_heading_deg_mag_pilot");
     adf1CardHeadingDegMagCopilotDataRef = XPLMFindDataRef("sim/cockpit2/radios/actuators/adf1_card_heading_deg_mag_copilot");
     adf2CardHeadingDegMagCopilotDataRef = XPLMFindDataRef("sim/cockpit2/radios/actuators/adf2_card_heading_deg_mag_copilot");
+    hsiObsDegMagPilotDataRef = XPLMFindDataRef("sim/cockpit2/radios/actuators/hsi_obs_deg_mag_pilot");
+    hsiObsDegMagCopilotDataRef = XPLMFindDataRef("sim/cockpit2/radios/actuators/hsi_obs_deg_mag_copilot");
     nav1ObsDegMagPilotDataRef = XPLMFindDataRef("sim/cockpit2/radios/actuators/nav1_obs_deg_mag_pilot");
     nav2ObsDegMagPilotDataRef = XPLMFindDataRef("sim/cockpit2/radios/actuators/nav2_obs_deg_mag_pilot");
     nav1ObsDegMagCopilotDataRef = XPLMFindDataRef("sim/cockpit2/radios/actuators/nav1_obs_deg_mag_copilot");
