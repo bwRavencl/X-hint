@@ -45,7 +45,7 @@
 // define hint duration
 #define HINT_DURATION 1.0f
 
-// define plugin signatures
+// define XPScrollWheel plugin signature
 #define XP_SCROLL_WHEEL_PLUGIN_SIGNATURE "thranda.window.scrollwheel"
 
 // global dataref variables
@@ -58,7 +58,8 @@ static char hintText[32];
 static Display *display = NULL;
 #endif
 
-static float ClampToRange(float value, float min, float max)
+// if the given value is beyond the range a value that is inside the given range is returned - the behavior resembles integer underflows / overflows occured - values inside the given range are simply returned
+static float HandleOverflow(float value, float min, float max)
 {
     float a = max - min;
     float b = fabs(value - max);
@@ -72,21 +73,24 @@ static float ClampToRange(float value, float min, float max)
         return value;
 }
 
+// display a hint showing a drift between -180 and 180 degrees
 static void DisplayDrifHint(float degrees)
 {
-    sprintf(hintText, "%.1f deg", ClampToRange(degrees, -180.0f, 180.0f));
+    sprintf(hintText, "%.1f deg", HandleOverflow(degrees, -180.0f, 180.0f));
     lastHintTime = XPLMGetElapsedTime();
 }
 
+// display a hint showing a barometer setting
 static void DisplayBarometerHint(float barometerSettingInHg)
 {
     sprintf(hintText, "%.2f inHg / %.0f mb", barometerSettingInHg, barometerSettingInHg * 33.8638866667f);
     lastHintTime = XPLMGetElapsedTime();
 }
 
+// display a hint showing a heading between 0 and 360 degrees
 static void DisplayHeadingHint(float degrees)
 {
-    sprintf(hintText, "%.0f deg", ClampToRange(degrees, 0.0f, 360.0f));
+    sprintf(hintText, "%.0f deg", HandleOverflow(degrees, 0.0f, 360.0f));
     lastHintTime = XPLMGetElapsedTime();
 }
 
@@ -193,12 +197,18 @@ static float FlightLoopCallback(float inElapsedSinceLastCall, float inElapsedTim
     return -1.0f;
 }
 
-// check if a plugin with a given signature is enabled
-static int isPluginEnabled(const char* pluginSignature)
+// check if the XPScrollWheel plugin is active
+static int isXpScrollWheelPluginActive()
 {
-    XPLMPluginID pluginId = XPLMFindPluginBySignature(pluginSignature);
+    XPLMPluginID pluginId = XPLMFindPluginBySignature(XP_SCROLL_WHEEL_PLUGIN_SIGNATURE);
 
-    return XPLMIsPluginEnabled(pluginId);
+    if (XPLMIsPluginEnabled(pluginId) != 0)
+    {
+        XPLMDataRef scrollWhDataRef = XPLMFindDataRef("thranda/panels/scrollWh");
+        return XPLMGetDatai(scrollWhDataRef);
+    }
+    else
+        return 0;
 }
 
 // draw-callback that performs the actual drawing of the hint
@@ -206,12 +216,12 @@ static int DrawCallback(XPLMDrawingPhase inPhase, int inIsBefore, void *inRefcon
 {
     float currentTime = XPLMGetElapsedTime();
 
-    if ((currentTime - lastMouseClickTime <= HINT_DURATION || isPluginEnabled(XP_SCROLL_WHEEL_PLUGIN_SIGNATURE) != 0) && currentTime - lastHintTime <= HINT_DURATION)
+    if ((currentTime - lastMouseClickTime <= HINT_DURATION || isXpScrollWheelPluginActive() != 0) && currentTime - lastHintTime <= HINT_DURATION)
     {
-        float color[] = { 1.0f, 1.0f, 1.0f };
+        float color[] = {1.0f, 1.0f, 1.0f};
         int x = 0, y = 0;
         XPLMGetMouseLocation(&x, &y);
-        XPLMDrawString(color, x, y - 40, hintText, NULL, xplmFont_Basic);
+        XPLMDrawString(color, x + 40, y - 40, hintText, NULL, xplmFont_Basic);
     }
 
     return 1;
