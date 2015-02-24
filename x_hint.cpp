@@ -48,12 +48,16 @@
 // define XPScrollWheel plugin signature
 #define XP_SCROLL_WHEEL_PLUGIN_SIGNATURE "thranda.window.scrollwheel"
 
+// define XPScrollWheel scrollIndex array size
+#define XP_SCROLL_WHEEL_PLUGIN_SCROLL_INDEX_SIZE 512
+
 // global dataref variables
 static XPLMDataRef dgDriftVacDegDataRef = NULL, dgDriftEleDegDataRef = NULL, dgDriftVac2DegDataRef = NULL, dgDriftEle2DegDataRef = NULL, headingDialDegMagPilotDataRef = NULL, headingDialDegMagCopilotDataRef = NULL, barometerSettingInHgPilotDataRef = NULL, barometerSettingInHgCopilotDataRef = NULL, adf1CardHeadingDegMagPilotDataRef = NULL, adf2CardHeadingDegMagPilotDataRef = NULL, adf1CardHeadingDegMagCopilotDataRef = NULL, adf2CardHeadingDegMagCopilotDataRef = NULL, hsiObsDegMagPilotDataRef = NULL, hsiObsDegMagCopilotDataRef = NULL, nav1ObsDegMagPilotDataRef = NULL, nav2ObsDegMagPilotDataRef = NULL, nav1ObsDegMagCopilotDataRef = NULL, nav2ObsDegMagCopilotDataRef = NULL;
 
 // global internal variables
-static float lastMouseClickTime = 0.0f, lastHintTime = 0.0f, lastDgDriftVacDeg = INT_MAX, lastDgDriftEleDeg = INT_MAX, lastDgDriftVac2Deg = INT_MAX, lastDgDriftEle2Deg = INT_MAX, lastHeadingDialDegMagPilot = INT_MAX, lastHeadingDialDegMagCopilot = INT_MAX, lastBarometerSettingInHgPilot = INT_MAX, lastBarometerSettingInHgCopilot = INT_MAX, lastAdf1CardHeadingDegMagPilot = INT_MAX, lastAdf2CardHeadingDegMagPilot = INT_MAX, lastAdf1CardHeadingDegMagCopilot = INT_MAX, lastAdf2CardHeadingDegMagCopilot = INT_MAX, lastHsiObsDegMagPilot = INT_MAX, lastHsiObsDegMagCopilot = INT_MAX, lastNav1ObsDegMagPilot = INT_MAX, lastNav2ObsDegMagPilot = INT_MAX, lastNav1ObsDegMagCopilot = INT_MAX, lastNav2ObsDegMagCopilot = INT_MAX;
 static char hintText[32];
+static int lastScrollindex[XP_SCROLL_WHEEL_PLUGIN_SCROLL_INDEX_SIZE];
+static float lastMouseUsageTime = 0.0f, lastHintTime = 0.0f, lastDgDriftVacDeg = INT_MAX, lastDgDriftEleDeg = INT_MAX, lastDgDriftVac2Deg = INT_MAX, lastDgDriftEle2Deg = INT_MAX, lastHeadingDialDegMagPilot = INT_MAX, lastHeadingDialDegMagCopilot = INT_MAX, lastBarometerSettingInHgPilot = INT_MAX, lastBarometerSettingInHgCopilot = INT_MAX, lastAdf1CardHeadingDegMagPilot = INT_MAX, lastAdf2CardHeadingDegMagPilot = INT_MAX, lastAdf1CardHeadingDegMagCopilot = INT_MAX, lastAdf2CardHeadingDegMagCopilot = INT_MAX, lastHsiObsDegMagPilot = INT_MAX, lastHsiObsDegMagCopilot = INT_MAX, lastNav1ObsDegMagPilot = INT_MAX, lastNav2ObsDegMagPilot = INT_MAX, lastNav1ObsDegMagCopilot = INT_MAX, lastNav2ObsDegMagCopilot = INT_MAX;
 #if LIN
 static Display *display = NULL;
 #endif
@@ -94,9 +98,10 @@ static void DisplayHeadingHint(float degrees)
     lastHintTime = XPLMGetElapsedTime();
 }
 
-// flightloop-callback that handles which hint is when displayed
-static float FlightLoopCallback(float inElapsedSinceLastCall, float inElapsedTimeSinceLastFlightLoop, int inCounter, void *inRefcon)
+// check if either the left mouse button is down or the XPScrollWheel plugin has been active
+static int IsMouseInUse()
 {
+    // check if left mouse button is down
 #if APL
     int mouseButtonDown = CGEventSourceButtonState(kCGEventSourceStateCombinedSessionState, kCGMouseButtonLeft);
 #elif IBM
@@ -115,7 +120,34 @@ static float FlightLoopCallback(float inElapsedSinceLastCall, float inElapsedTim
 #endif
 
     if (mouseButtonDown != 0)
-        lastMouseClickTime = XPLMGetElapsedTime();
+        return 1;
+
+    // check if the XPScrollWheel plugin has modified a DataRef since the last call
+    XPLMPluginID pluginId = XPLMFindPluginBySignature(XP_SCROLL_WHEEL_PLUGIN_SIGNATURE);
+    if (XPLMIsPluginEnabled(pluginId) != 0)
+    {
+        XPLMDataRef scrollindexDataRef = XPLMFindDataRef("thranda/scrollindex");
+        int scrollindex[XP_SCROLL_WHEEL_PLUGIN_SCROLL_INDEX_SIZE];
+        XPLMGetDatavi(scrollindexDataRef, scrollindex, 0, XP_SCROLL_WHEEL_PLUGIN_SCROLL_INDEX_SIZE);
+
+        for (int i = 0; i < XP_SCROLL_WHEEL_PLUGIN_SCROLL_INDEX_SIZE; i++)
+        {
+            if (scrollindex[i] != lastScrollindex[i])
+            {
+                memcpy(lastScrollindex, scrollindex, XP_SCROLL_WHEEL_PLUGIN_SCROLL_INDEX_SIZE);
+                return 1;
+            }
+        }
+    }
+
+    return 0;
+}
+
+// flightloop-callback that handles which hint is when displayed
+static float FlightLoopCallback(float inElapsedSinceLastCall, float inElapsedTimeSinceLastFlightLoop, int inCounter, void *inRefcon)
+{
+    if (IsMouseInUse() != 0)
+        lastMouseUsageTime = XPLMGetElapsedTime();
 
     float dgDriftVacDeg = XPLMGetDataf(dgDriftVacDegDataRef);
     float dgDriftEleDeg = XPLMGetDataf(dgDriftEleDegDataRef);
@@ -197,26 +229,12 @@ static float FlightLoopCallback(float inElapsedSinceLastCall, float inElapsedTim
     return -1.0f;
 }
 
-// check if the XPScrollWheel plugin is active
-static int isXpScrollWheelPluginActive()
-{
-    XPLMPluginID pluginId = XPLMFindPluginBySignature(XP_SCROLL_WHEEL_PLUGIN_SIGNATURE);
-
-    if (XPLMIsPluginEnabled(pluginId) != 0)
-    {
-        XPLMDataRef scrollWhDataRef = XPLMFindDataRef("thranda/panels/scrollWh");
-        return XPLMGetDatai(scrollWhDataRef);
-    }
-    else
-        return 0;
-}
-
 // draw-callback that performs the actual drawing of the hint
 static int DrawCallback(XPLMDrawingPhase inPhase, int inIsBefore, void *inRefcon)
 {
     float currentTime = XPLMGetElapsedTime();
 
-    if ((currentTime - lastMouseClickTime <= HINT_DURATION || isXpScrollWheelPluginActive() != 0) && currentTime - lastHintTime <= HINT_DURATION)
+    if (currentTime - lastMouseUsageTime <= HINT_DURATION && currentTime - lastHintTime <= HINT_DURATION)
     {
         float color[] = {1.0f, 1.0f, 1.0f};
         int x = 0, y = 0;
