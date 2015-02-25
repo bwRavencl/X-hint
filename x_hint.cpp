@@ -55,8 +55,8 @@
 static XPLMDataRef dgDriftVacDegDataRef = NULL, dgDriftEleDegDataRef = NULL, dgDriftVac2DegDataRef = NULL, dgDriftEle2DegDataRef = NULL, headingDialDegMagPilotDataRef = NULL, headingDialDegMagCopilotDataRef = NULL, barometerSettingInHgPilotDataRef = NULL, barometerSettingInHgCopilotDataRef = NULL, adf1CardHeadingDegMagPilotDataRef = NULL, adf2CardHeadingDegMagPilotDataRef = NULL, adf1CardHeadingDegMagCopilotDataRef = NULL, adf2CardHeadingDegMagCopilotDataRef = NULL, hsiObsDegMagPilotDataRef = NULL, hsiObsDegMagCopilotDataRef = NULL, nav1ObsDegMagPilotDataRef = NULL, nav2ObsDegMagPilotDataRef = NULL, nav1ObsDegMagCopilotDataRef = NULL, nav2ObsDegMagCopilotDataRef = NULL;
 
 // global internal variables
-static char hintText[32];
-static int lastScrollindex[XP_SCROLL_WHEEL_PLUGIN_SCROLL_INDEX_SIZE];
+static char hintText[32] = "";
+static int lastScrollindex[XP_SCROLL_WHEEL_PLUGIN_SCROLL_INDEX_SIZE] = {0};
 static float lastMouseUsageTime = 0.0f, lastHintTime = 0.0f, lastDgDriftVacDeg = INT_MAX, lastDgDriftEleDeg = INT_MAX, lastDgDriftVac2Deg = INT_MAX, lastDgDriftEle2Deg = INT_MAX, lastHeadingDialDegMagPilot = INT_MAX, lastHeadingDialDegMagCopilot = INT_MAX, lastBarometerSettingInHgPilot = INT_MAX, lastBarometerSettingInHgCopilot = INT_MAX, lastAdf1CardHeadingDegMagPilot = INT_MAX, lastAdf2CardHeadingDegMagPilot = INT_MAX, lastAdf1CardHeadingDegMagCopilot = INT_MAX, lastAdf2CardHeadingDegMagCopilot = INT_MAX, lastHsiObsDegMagPilot = INT_MAX, lastHsiObsDegMagCopilot = INT_MAX, lastNav1ObsDegMagPilot = INT_MAX, lastNav2ObsDegMagPilot = INT_MAX, lastNav1ObsDegMagCopilot = INT_MAX, lastNav2ObsDegMagCopilot = INT_MAX;
 #if LIN
 static Display *display = NULL;
