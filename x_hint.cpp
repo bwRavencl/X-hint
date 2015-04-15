@@ -257,8 +257,8 @@ PLUGIN_API int XPluginStart(char *outName, char *outSig, char *outDesc)
 {
     // set plugin info
     strcpy(outName, NAME);
-    strcpy(outSig, "de.bwravencl."NAME_LOWERCASE);
-    strcpy(outDesc, NAME" simpliefies handling X-Plane by adding tooltips!");
+    strcpy(outSig, "de.bwravencl." NAME_LOWERCASE);
+    strcpy(outDesc, NAME " simpliefies handling X-Plane by adding tooltips!");
 
     // obtain datarefs
     dgDriftVacDegDataRef = XPLMFindDataRef("sim/cockpit/gyros/dg_drift_vac_deg");
