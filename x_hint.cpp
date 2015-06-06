@@ -21,46 +21,48 @@
 #include "XPLMPlugin.h"
 #include "XPLMProcessing.h"
 
-#if APL
-#include "ApplicationServices/ApplicationServices.h"
-#else
 #include <limits.h>
 #include <math.h>
 #include <stdio.h>
 #include <string.h>
-#endif
-#if IBM
-#include <windows.h>
-#elif LIN
-#include <X11/Xlib.h>
-#endif
 
 // define name
 #define NAME "X-hint"
 #define NAME_LOWERCASE "x_hint"
 
 // define version
-#define VERSION "0.1"
+#define VERSION "0.2"
 
 // define hint duration
 #define HINT_DURATION 1.0f
-
-// define XPScrollWheel plugin signature
-#define XP_SCROLL_WHEEL_PLUGIN_SIGNATURE "thranda.window.scrollwheel"
-
-// define XPScrollWheel scrollIndex array size
-#define XP_SCROLL_WHEEL_PLUGIN_SCROLL_INDEX_SIZE 512
 
 // global dataref variables
 static XPLMDataRef dgDriftVacDegDataRef = NULL, dgDriftEleDegDataRef = NULL, dgDriftVac2DegDataRef = NULL, dgDriftEle2DegDataRef = NULL, headingDialDegMagPilotDataRef = NULL, headingDialDegMagCopilotDataRef = NULL, barometerSettingInHgPilotDataRef = NULL, barometerSettingInHgCopilotDataRef = NULL, adf1CardHeadingDegMagPilotDataRef = NULL, adf2CardHeadingDegMagPilotDataRef = NULL, adf1CardHeadingDegMagCopilotDataRef = NULL, adf2CardHeadingDegMagCopilotDataRef = NULL, hsiObsDegMagPilotDataRef = NULL, hsiObsDegMagCopilotDataRef = NULL, nav1ObsDegMagPilotDataRef = NULL, nav2ObsDegMagPilotDataRef = NULL, nav1ObsDegMagCopilotDataRef = NULL, nav2ObsDegMagCopilotDataRef = NULL;
 
 // global internal variables
 static char hintText[32] = "";
-static int lastScrollindex[XP_SCROLL_WHEEL_PLUGIN_SCROLL_INDEX_SIZE] = {0};
+static int bringFakeWindowToFront = 0;
 static float lastMouseUsageTime = 0.0f, lastHintTime = 0.0f, lastDgDriftVacDeg = INT_MAX, lastDgDriftEleDeg = INT_MAX, lastDgDriftVac2Deg = INT_MAX, lastDgDriftEle2Deg = INT_MAX, lastHeadingDialDegMagPilot = INT_MAX, lastHeadingDialDegMagCopilot = INT_MAX, lastBarometerSettingInHgPilot = INT_MAX, lastBarometerSettingInHgCopilot = INT_MAX, lastAdf1CardHeadingDegMagPilot = INT_MAX, lastAdf2CardHeadingDegMagPilot = INT_MAX, lastAdf1CardHeadingDegMagCopilot = INT_MAX, lastAdf2CardHeadingDegMagCopilot = INT_MAX, lastHsiObsDegMagPilot = INT_MAX, lastHsiObsDegMagCopilot = INT_MAX, lastNav1ObsDegMagPilot = INT_MAX, lastNav2ObsDegMagPilot = INT_MAX, lastNav1ObsDegMagCopilot = INT_MAX, lastNav2ObsDegMagCopilot = INT_MAX;
-#if LIN
-static Display *display = NULL;
-#endif
+static XPLMWindowID fakeWindow = NULL;
+
+// flightloop-callback that resizes and brings the fake window back to the front if needed
+static float UpdateFakeWindowCallback(float inElapsedSinceLastCall, float inElapsedTimeSinceLastFlightLoop, int inCounter, void *inRefcon)
+{
+    if (fakeWindow != NULL)
+    {
+        int x = 0, y = 0;
+        XPLMGetScreenSize(&x, &y);
+        XPLMSetWindowGeometry(fakeWindow, 0, y, x, 0);
+
+        if (bringFakeWindowToFront == 0)
+        {
+            XPLMBringWindowToFront(fakeWindow);
+            bringFakeWindowToFront = 1;
+        }
+    }
+
+    return -1.0f;
+}
 
 // if the given value is beyond the range a value that is inside the given range is returned - the behavior resembles integer underflows / overflows occured - values inside the given range are simply returned
 static float HandleOverflow(float value, float min, float max)
@@ -98,65 +100,9 @@ static void DisplayHeadingHint(float degrees)
     lastHintTime = XPLMGetElapsedTime();
 }
 
-// check if either the left or right mouse button is down or the XPScrollWheel plugin has been active - the right button is only checked if checkRightButton is not zero
-static int IsMouseInUse(int checkRightButton)
-{
-    // check if mouse buttons are down
-    int mouseButtonDown[2] = {0};
-#if APL
-    mouseButtonDown[0] = CGEventSourceButtonState(kCGEventSourceStateCombinedSessionState, kCGMouseButtonLeft);
-    mouseButtonDown[1] = CGEventSourceButtonState(kCGEventSourceStateCombinedSessionState, kCGMouseButtonRight);
-#elif IBM
-    // if the most significant bit is set, the key is down
-    mouseButtonDown[0] = (int) GetAsyncKeyState(VK_LBUTTON) >> 15;
-    mouseButtonDown[1] = (int) GetAsyncKeyState(VK_RBUTTON) >> 15;
-#elif LIN
-    if (display == NULL)
-        display = XOpenDisplay(NULL);
-    if (display != NULL)
-    {
-        Window root, child;
-        int rootX, rootY, winX, winY;
-        unsigned int mask;
-        XQueryPointer(display, DefaultRootWindow(display), &root, &child, &rootX, &rootY, &winX, &winY, &mask);
-        mouseButtonDown[0] = (mask & Button1Mask) >> 8;
-        mouseButtonDown[1] = (mask & Button2Mask) >> 8;
-    }
-#endif
-
-    if (mouseButtonDown[0] != 0)
-        return 1;
-
-    if (checkRightButton != 0 && mouseButtonDown[1] != 0)
-        return 1;
-
-    // check if the XPScrollWheel plugin has modified a DataRef since the last call
-    XPLMPluginID pluginId = XPLMFindPluginBySignature(XP_SCROLL_WHEEL_PLUGIN_SIGNATURE);
-    if (XPLMIsPluginEnabled(pluginId) != 0)
-    {
-        XPLMDataRef scrollindexDataRef = XPLMFindDataRef("thranda/scrollindex");
-        int scrollindex[XP_SCROLL_WHEEL_PLUGIN_SCROLL_INDEX_SIZE];
-        XPLMGetDatavi(scrollindexDataRef, scrollindex, 0, XP_SCROLL_WHEEL_PLUGIN_SCROLL_INDEX_SIZE);
-
-        for (int i = 0; i < XP_SCROLL_WHEEL_PLUGIN_SCROLL_INDEX_SIZE; i++)
-        {
-            if (scrollindex[i] != lastScrollindex[i])
-            {
-                memcpy(lastScrollindex, scrollindex, XP_SCROLL_WHEEL_PLUGIN_SCROLL_INDEX_SIZE);
-                return 1;
-            }
-        }
-    }
-
-    return 0;
-}
-
 // flightloop-callback that handles which hint is when displayed
 static float FlightLoopCallback(float inElapsedSinceLastCall, float inElapsedTimeSinceLastFlightLoop, int inCounter, void *inRefcon)
 {
-    if (IsMouseInUse(0) != 0)
-        lastMouseUsageTime = XPLMGetElapsedTime();
-
     float dgDriftVacDeg = XPLMGetDataf(dgDriftVacDegDataRef);
     float dgDriftEleDeg = XPLMGetDataf(dgDriftEleDegDataRef);
     float dgDriftVac2Deg = XPLMGetDataf(dgDriftVac2DegDataRef);
@@ -253,6 +199,33 @@ static int DrawCallback(XPLMDrawingPhase inPhase, int inIsBefore, void *inRefcon
     return 1;
 }
 
+static void DrawWindow(XPLMWindowID inWindowID, void *inRefcon)
+{
+}
+
+static void HandleKey(XPLMWindowID inWindowID, char inKey, XPLMKeyFlags inFlags, char inVirtualKey, void *inRefcon, int losingFocus)
+{
+}
+
+static int HandleMouseClick(XPLMWindowID inWindowID, int x, int y, XPLMMouseStatus inMouse, void *inRefcon)
+{
+    lastMouseUsageTime = XPLMGetElapsedTime();
+    
+    return 0;
+}
+
+static XPLMCursorStatus HandleCursor(XPLMWindowID inWindowID, int x, int y, void *inRefcon)
+{
+    return xplm_CursorDefault;
+}
+
+static int HandleMouseWheel(XPLMWindowID inWindowID, int x, int y, int wheel, int clicks, void *inRefcon)
+{
+    lastMouseUsageTime = XPLMGetElapsedTime();
+
+    return 0;
+}
+
 PLUGIN_API int XPluginStart(char *outName, char *outSig, char *outDesc)
 {
     // set plugin info
@@ -280,7 +253,26 @@ PLUGIN_API int XPluginStart(char *outName, char *outSig, char *outDesc)
     nav1ObsDegMagCopilotDataRef = XPLMFindDataRef("sim/cockpit2/radios/actuators/nav1_obs_deg_mag_copilot");
     nav2ObsDegMagCopilotDataRef = XPLMFindDataRef("sim/cockpit2/radios/actuators/nav2_obs_deg_mag_copilot");
 
-    // register flight loop callback
+    // create fake window
+    XPLMCreateWindow_t fakeWindowParameters;
+    memset(&fakeWindowParameters, 0, sizeof(fakeWindowParameters));
+    fakeWindowParameters.structSize = sizeof(fakeWindowParameters);
+    fakeWindowParameters.left = 0;
+    int x = 0, y = 0;
+    XPLMGetScreenSize(&x, &y);
+    fakeWindowParameters.top = y;
+    fakeWindowParameters.right = x;
+    fakeWindowParameters.bottom = 0;
+    fakeWindowParameters.visible = 1;
+    fakeWindowParameters.drawWindowFunc = DrawWindow;
+    fakeWindowParameters.handleKeyFunc = HandleKey;
+    fakeWindowParameters.handleMouseClickFunc = HandleMouseClick;
+    fakeWindowParameters.handleCursorFunc = HandleCursor;
+    fakeWindowParameters.handleMouseWheelFunc = HandleMouseWheel;
+    fakeWindow = XPLMCreateWindowEx(&fakeWindowParameters);
+
+    // register flight loop callbacks
+    XPLMRegisterFlightLoopCallback(UpdateFakeWindowCallback, -1, NULL);
     XPLMRegisterFlightLoopCallback(FlightLoopCallback, -1, NULL);
 
     // register draw callback
@@ -291,10 +283,6 @@ PLUGIN_API int XPluginStart(char *outName, char *outSig, char *outDesc)
 
 PLUGIN_API void	XPluginStop(void)
 {
-#if LIN
-    if(display != NULL)
-        XCloseDisplay(display);
-#endif
 }
 
 PLUGIN_API void XPluginDisable(void)
@@ -308,4 +296,6 @@ PLUGIN_API int XPluginEnable(void)
 
 PLUGIN_API void XPluginReceiveMessage(XPLMPluginID inFromWho, long inMessage, void *inParam)
 {
+    if (inMessage == XPLM_MSG_PLANE_LOADED)
+        bringFakeWindowToFront = 0; 
 }
