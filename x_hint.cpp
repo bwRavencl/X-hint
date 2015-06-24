@@ -33,6 +33,9 @@
 // define version
 #define VERSION "0.2"
 
+// define QPAC A320 plugin signature
+#define QPAC_A320_PLUGIN_SIGNATURE "QPAC.airbus.fbw"
+
 // define hint duration
 #define HINT_DURATION 4.0f
 
@@ -100,6 +103,14 @@ static void DisplayHeadingHint(float degrees)
     lastHintTime = XPLMGetElapsedTime();
 }
 
+// check if a plugin with a given signature is enabled
+static int IsPluginEnabled(const char* pluginSignature)
+{
+    XPLMPluginID pluginId = XPLMFindPluginBySignature(pluginSignature);
+
+    return XPLMIsPluginEnabled(pluginId);
+}
+
 // flightloop-callback that handles which hint is when displayed
 static float FlightLoopCallback(float inElapsedSinceLastCall, float inElapsedTimeSinceLastFlightLoop, int inCounter, void *inRefcon)
 {
@@ -130,9 +141,9 @@ static float FlightLoopCallback(float inElapsedSinceLastCall, float inElapsedTim
         DisplayDrifHint(dgDriftVac2Deg);
     else if (lastDgDriftEle2Deg != INT_MAX && fabs(dgDriftEle2Deg - lastDgDriftEle2Deg) > 0.01f)
         DisplayDrifHint(dgDriftEle2Deg);
-    else if (lastHeadingDialDegMagPilot != INT_MAX && headingDialDegMagPilot != lastHeadingDialDegMagPilot)
+    else if (lastHeadingDialDegMagPilot != INT_MAX && headingDialDegMagPilot != lastHeadingDialDegMagPilot && IsPluginEnabled(QPAC_A320_PLUGIN_SIGNATURE) == 0)
         DisplayHeadingHint(headingDialDegMagPilot);
-    else if (lastHeadingDialDegMagCopilot != INT_MAX && headingDialDegMagCopilot != lastHeadingDialDegMagCopilot)
+    else if (lastHeadingDialDegMagCopilot != INT_MAX && headingDialDegMagCopilot != lastHeadingDialDegMagCopilot && IsPluginEnabled(QPAC_A320_PLUGIN_SIGNATURE) == 0)
         DisplayHeadingHint(headingDialDegMagCopilot);
     else if (lastBarometerSettingInHgPilot != INT_MAX && barometerSettingInHgPilot != lastBarometerSettingInHgPilot)
         DisplayBarometerHint(barometerSettingInHgPilot);
@@ -210,7 +221,7 @@ static void HandleKey(XPLMWindowID inWindowID, char inKey, XPLMKeyFlags inFlags,
 static int HandleMouseClick(XPLMWindowID inWindowID, int x, int y, XPLMMouseStatus inMouse, void *inRefcon)
 {
     lastMouseUsageTime = XPLMGetElapsedTime();
-    
+
     return 0;
 }
 
@@ -297,5 +308,5 @@ PLUGIN_API int XPluginEnable(void)
 PLUGIN_API void XPluginReceiveMessage(XPLMPluginID inFromWho, long inMessage, void *inParam)
 {
     if (inMessage == XPLM_MSG_PLANE_LOADED)
-        bringFakeWindowToFront = 0; 
+        bringFakeWindowToFront = 0;
 }
