@@ -96,19 +96,22 @@ static void DisplayBarometerHint(float barometerSettingInHg)
     lastHintTime = XPLMGetElapsedTime();
 }
 
-// display a hint showing a heading between 0 and 360 degrees
-static void DisplayHeadingHint(float degrees)
-{
-    sprintf(hintText, "%.0f deg", HandleOverflow(degrees, 0.0f, 360.0f));
-    lastHintTime = XPLMGetElapsedTime();
-}
-
 // check if a plugin with a given signature is enabled
 static int IsPluginEnabled(const char* pluginSignature)
 {
     XPLMPluginID pluginId = XPLMFindPluginBySignature(pluginSignature);
 
     return XPLMIsPluginEnabled(pluginId);
+}
+
+// display a hint showing a heading between 0 and 360 degrees
+static void DisplayHeadingHint(float degrees)
+{
+    if (IsPluginEnabled(QPAC_A320_PLUGIN_SIGNATURE) == 0)
+    {
+        sprintf(hintText, "%.0f deg", HandleOverflow(degrees, 0.0f, 360.0f));
+        lastHintTime = XPLMGetElapsedTime();
+    }
 }
 
 // flightloop-callback that handles which hint is when displayed
@@ -141,9 +144,9 @@ static float FlightLoopCallback(float inElapsedSinceLastCall, float inElapsedTim
         DisplayDrifHint(dgDriftVac2Deg);
     else if (lastDgDriftEle2Deg != INT_MAX && fabs(dgDriftEle2Deg - lastDgDriftEle2Deg) > 0.01f)
         DisplayDrifHint(dgDriftEle2Deg);
-    else if (lastHeadingDialDegMagPilot != INT_MAX && headingDialDegMagPilot != lastHeadingDialDegMagPilot && IsPluginEnabled(QPAC_A320_PLUGIN_SIGNATURE) == 0)
+    else if (lastHeadingDialDegMagPilot != INT_MAX && headingDialDegMagPilot != lastHeadingDialDegMagPilot)
         DisplayHeadingHint(headingDialDegMagPilot);
-    else if (lastHeadingDialDegMagCopilot != INT_MAX && headingDialDegMagCopilot != lastHeadingDialDegMagCopilot && IsPluginEnabled(QPAC_A320_PLUGIN_SIGNATURE) == 0)
+    else if (lastHeadingDialDegMagCopilot != INT_MAX && headingDialDegMagCopilot != lastHeadingDialDegMagCopilot)
         DisplayHeadingHint(headingDialDegMagCopilot);
     else if (lastBarometerSettingInHgPilot != INT_MAX && barometerSettingInHgPilot != lastBarometerSettingInHgPilot)
         DisplayBarometerHint(barometerSettingInHgPilot);
