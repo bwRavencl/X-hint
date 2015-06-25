@@ -67,6 +67,14 @@ static float UpdateFakeWindowCallback(float inElapsedSinceLastCall, float inElap
     return -1.0f;
 }
 
+// check if a plugin with a given signature is enabled
+static int IsPluginEnabled(const char* pluginSignature)
+{
+    XPLMPluginID pluginId = XPLMFindPluginBySignature(pluginSignature);
+
+    return XPLMIsPluginEnabled(pluginId);
+}
+
 // if the given value is beyond the range a value that is inside the given range is returned - the behavior resembles integer underflows / overflows occured - values inside the given range are simply returned
 static float HandleOverflow(float value, float min, float max)
 {
@@ -83,10 +91,13 @@ static float HandleOverflow(float value, float min, float max)
 }
 
 // display a hint showing a drift between -180 and 180 degrees
-static void DisplayDrifHint(float degrees)
+static void DisplayDriftHint(float degrees)
 {
-    sprintf(hintText, "%.1f deg", HandleOverflow(degrees, -180.0f, 180.0f));
-    lastHintTime = XPLMGetElapsedTime();
+    if (IsPluginEnabled(QPAC_A320_PLUGIN_SIGNATURE) == 0)
+    {
+        sprintf(hintText, "%.1f deg", HandleOverflow(degrees, -180.0f, 180.0f));
+        lastHintTime = XPLMGetElapsedTime();
+    }
 }
 
 // display a hint showing a barometer setting
@@ -94,14 +105,6 @@ static void DisplayBarometerHint(float barometerSettingInHg)
 {
     sprintf(hintText, "%.2f inHg / %.0f mb", barometerSettingInHg, barometerSettingInHg * 33.8638866667f);
     lastHintTime = XPLMGetElapsedTime();
-}
-
-// check if a plugin with a given signature is enabled
-static int IsPluginEnabled(const char* pluginSignature)
-{
-    XPLMPluginID pluginId = XPLMFindPluginBySignature(pluginSignature);
-
-    return XPLMIsPluginEnabled(pluginId);
 }
 
 // display a hint showing a heading between 0 and 360 degrees
@@ -137,13 +140,13 @@ static float FlightLoopCallback(float inElapsedSinceLastCall, float inElapsedTim
     float nav2ObsDegMagCopilot = XPLMGetDataf(nav2ObsDegMagCopilotDataRef);
 
     if (lastDgDriftVacDeg != INT_MAX && fabs(dgDriftVacDeg - lastDgDriftVacDeg) > 0.01f)
-        DisplayDrifHint(dgDriftVacDeg);
+        DisplayDriftHint(dgDriftVacDeg);
     else if (lastDgDriftEleDeg != INT_MAX && fabs(dgDriftEleDeg - lastDgDriftEleDeg) > 0.01f)
-        DisplayDrifHint(dgDriftEleDeg);
+        DisplayDriftHint(dgDriftEleDeg);
     else if (lastDgDriftVac2Deg != INT_MAX && fabs(dgDriftVac2Deg - lastDgDriftVac2Deg) > 0.01f)
-        DisplayDrifHint(dgDriftVac2Deg);
+        DisplayDriftHint(dgDriftVac2Deg);
     else if (lastDgDriftEle2Deg != INT_MAX && fabs(dgDriftEle2Deg - lastDgDriftEle2Deg) > 0.01f)
-        DisplayDrifHint(dgDriftEle2Deg);
+        DisplayDriftHint(dgDriftEle2Deg);
     else if (lastHeadingDialDegMagPilot != INT_MAX && headingDialDegMagPilot != lastHeadingDialDegMagPilot)
         DisplayHeadingHint(headingDialDegMagPilot);
     else if (lastHeadingDialDegMagCopilot != INT_MAX && headingDialDegMagCopilot != lastHeadingDialDegMagCopilot)
