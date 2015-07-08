@@ -2,14 +2,11 @@ BUILDDIR    := ./build
 SRC_BASE    := .
 TARGET      := x_hint
 
-SOURCES = \
-        x_hint.cpp
+SOURCES = x_hint.cpp
 
 LIBS =
 
-INCLUDES = \
-        -I$(SRC_BASE)/SDK/CHeaders/XPLM \
-        -I$(SRC_BASE)/SDK/CHeaders/Widgets
+INCLUDES = -I$(SRC_BASE)/SDK/CHeaders/XPLM -I$(SRC_BASE)/SDK/CHeaders/Widgets
 
 DEFINES = -DAPL=0 -DIBM=0 -DLIN=1 -DXPLM200=1
 

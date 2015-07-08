@@ -21,7 +21,7 @@
 #include "XPLMPlugin.h"
 #include "XPLMProcessing.h"
 
-#include <limits.h>
+#include <float.h>
 #include <math.h>
 #include <stdio.h>
 #include <string.h>
@@ -31,7 +31,7 @@
 #define NAME_LOWERCASE "x_hint"
 
 // define version
-#define VERSION "0.2"
+#define VERSION "0.3"
 
 // define QPAC A320 plugin signature
 #define QPAC_A320_PLUGIN_SIGNATURE "QPAC.airbus.fbw"
@@ -44,8 +44,8 @@ static XPLMDataRef dgDriftVacDegDataRef = NULL, dgDriftEleDegDataRef = NULL, dgD
 
 // global internal variables
 static char hintText[32] = "";
-static int bringFakeWindowToFront = 0;
-static float lastMouseUsageTime = 0.0f, lastHintTime = 0.0f, lastDgDriftVacDeg = INT_MAX, lastDgDriftEleDeg = INT_MAX, lastDgDriftVac2Deg = INT_MAX, lastDgDriftEle2Deg = INT_MAX, lastHeadingDialDegMagPilot = INT_MAX, lastHeadingDialDegMagCopilot = INT_MAX, lastBarometerSettingInHgPilot = INT_MAX, lastBarometerSettingInHgCopilot = INT_MAX, lastAdf1CardHeadingDegMagPilot = INT_MAX, lastAdf2CardHeadingDegMagPilot = INT_MAX, lastAdf1CardHeadingDegMagCopilot = INT_MAX, lastAdf2CardHeadingDegMagCopilot = INT_MAX, lastHsiObsDegMagPilot = INT_MAX, lastHsiObsDegMagCopilot = INT_MAX, lastNav1ObsDegMagPilot = INT_MAX, lastNav2ObsDegMagPilot = INT_MAX, lastNav1ObsDegMagCopilot = INT_MAX, lastNav2ObsDegMagCopilot = INT_MAX;
+static int bringFakeWindowToFront = 0, lastChangeDetected = 0, forceDisplay = 0;
+static float lastMouseUsageTime = 0.0f, lastHintTime = 0.0f, lastDgDriftVacDeg = FLT_MAX, lastDgDriftEleDeg = FLT_MAX, lastDgDriftVac2Deg = FLT_MAX, lastDgDriftEle2Deg = FLT_MAX, lastHeadingDialDegMagPilot = FLT_MAX, lastHeadingDialDegMagCopilot = FLT_MAX, lastBarometerSettingInHgPilot = FLT_MAX, lastBarometerSettingInHgCopilot = FLT_MAX, lastAdf1CardHeadingDegMagPilot = FLT_MAX, lastAdf2CardHeadingDegMagPilot = FLT_MAX, lastAdf1CardHeadingDegMagCopilot = FLT_MAX, lastAdf2CardHeadingDegMagCopilot = FLT_MAX, lastHsiObsDegMagPilot = FLT_MAX, lastHsiObsDegMagCopilot = FLT_MAX, lastNav1ObsDegMagPilot = FLT_MAX, lastNav2ObsDegMagPilot = FLT_MAX, lastNav1ObsDegMagCopilot = FLT_MAX, lastNav2ObsDegMagCopilot = FLT_MAX;
 static XPLMWindowID fakeWindow = NULL;
 
 // flightloop-callback that resizes and brings the fake window back to the front if needed
@@ -117,7 +117,7 @@ static void DisplayHeadingHint(float degrees)
     }
 }
 
-// flightloop-callback that handles which hint is when displayed
+// flightloop-callback that handles which hint is displayed when
 static float FlightLoopCallback(float inElapsedSinceLastCall, float inElapsedTimeSinceLastFlightLoop, int inCounter, void *inRefcon)
 {
     float dgDriftVacDeg = XPLMGetDataf(dgDriftVacDegDataRef);
@@ -139,44 +139,53 @@ static float FlightLoopCallback(float inElapsedSinceLastCall, float inElapsedTim
     float nav1ObsDegMagCopilot = XPLMGetDataf(nav1ObsDegMagCopilotDataRef);
     float nav2ObsDegMagCopilot = XPLMGetDataf(nav2ObsDegMagCopilotDataRef);
 
-    if (lastDgDriftVacDeg != INT_MAX && fabs(dgDriftVacDeg - lastDgDriftVacDeg) > 0.01f)
+    int changeDetected = 1;
+
+    if (lastDgDriftVacDeg != FLT_MAX && fabs(dgDriftVacDeg - lastDgDriftVacDeg) > 0.01f)
         DisplayDriftHint(dgDriftVacDeg);
-    else if (lastDgDriftEleDeg != INT_MAX && fabs(dgDriftEleDeg - lastDgDriftEleDeg) > 0.01f)
+    else if (lastDgDriftEleDeg != FLT_MAX && fabs(dgDriftEleDeg - lastDgDriftEleDeg) > 0.01f)
         DisplayDriftHint(dgDriftEleDeg);
-    else if (lastDgDriftVac2Deg != INT_MAX && fabs(dgDriftVac2Deg - lastDgDriftVac2Deg) > 0.01f)
+    else if (lastDgDriftVac2Deg != FLT_MAX && fabs(dgDriftVac2Deg - lastDgDriftVac2Deg) > 0.01f)
         DisplayDriftHint(dgDriftVac2Deg);
-    else if (lastDgDriftEle2Deg != INT_MAX && fabs(dgDriftEle2Deg - lastDgDriftEle2Deg) > 0.01f)
+    else if (lastDgDriftEle2Deg != FLT_MAX && fabs(dgDriftEle2Deg - lastDgDriftEle2Deg) > 0.01f)
         DisplayDriftHint(dgDriftEle2Deg);
-    else if (lastHeadingDialDegMagPilot != INT_MAX && headingDialDegMagPilot != lastHeadingDialDegMagPilot)
+    else if (lastHeadingDialDegMagPilot != FLT_MAX && headingDialDegMagPilot != lastHeadingDialDegMagPilot)
         DisplayHeadingHint(headingDialDegMagPilot);
-    else if (lastHeadingDialDegMagCopilot != INT_MAX && headingDialDegMagCopilot != lastHeadingDialDegMagCopilot)
+    else if (lastHeadingDialDegMagCopilot != FLT_MAX && headingDialDegMagCopilot != lastHeadingDialDegMagCopilot)
         DisplayHeadingHint(headingDialDegMagCopilot);
-    else if (lastBarometerSettingInHgPilot != INT_MAX && barometerSettingInHgPilot != lastBarometerSettingInHgPilot)
+    else if (lastBarometerSettingInHgPilot != FLT_MAX && barometerSettingInHgPilot != lastBarometerSettingInHgPilot)
         DisplayBarometerHint(barometerSettingInHgPilot);
-    else if (lastBarometerSettingInHgCopilot != INT_MAX && barometerSettingInHgCopilot != lastBarometerSettingInHgCopilot)
+    else if (lastBarometerSettingInHgCopilot != FLT_MAX && barometerSettingInHgCopilot != lastBarometerSettingInHgCopilot)
         DisplayBarometerHint(barometerSettingInHgCopilot);
-    else if (lastBarometerSettingInHgCopilot != INT_MAX && barometerSettingInHgCopilot != lastBarometerSettingInHgCopilot)
+    else if (lastBarometerSettingInHgCopilot != FLT_MAX && barometerSettingInHgCopilot != lastBarometerSettingInHgCopilot)
         DisplayBarometerHint(barometerSettingInHgCopilot);
-    else if (lastAdf1CardHeadingDegMagPilot != INT_MAX && adf1CardHeadingDegMagPilot != lastAdf1CardHeadingDegMagPilot)
+    else if (lastAdf1CardHeadingDegMagPilot != FLT_MAX && adf1CardHeadingDegMagPilot != lastAdf1CardHeadingDegMagPilot)
         DisplayHeadingHint(adf1CardHeadingDegMagPilot);
-    else if (lastAdf2CardHeadingDegMagPilot != INT_MAX && adf2CardHeadingDegMagPilot != lastAdf2CardHeadingDegMagPilot)
+    else if (lastAdf2CardHeadingDegMagPilot != FLT_MAX && adf2CardHeadingDegMagPilot != lastAdf2CardHeadingDegMagPilot)
         DisplayHeadingHint(adf2CardHeadingDegMagPilot);
-    else if (lastAdf1CardHeadingDegMagCopilot != INT_MAX && adf1CardHeadingDegMagCopilot != lastAdf1CardHeadingDegMagCopilot)
+    else if (lastAdf1CardHeadingDegMagCopilot != FLT_MAX && adf1CardHeadingDegMagCopilot != lastAdf1CardHeadingDegMagCopilot)
         DisplayHeadingHint(adf1CardHeadingDegMagCopilot);
-    else if (lastAdf2CardHeadingDegMagCopilot != INT_MAX && adf2CardHeadingDegMagCopilot != lastAdf2CardHeadingDegMagCopilot)
+    else if (lastAdf2CardHeadingDegMagCopilot != FLT_MAX && adf2CardHeadingDegMagCopilot != lastAdf2CardHeadingDegMagCopilot)
         DisplayHeadingHint(adf2CardHeadingDegMagCopilot);
-    else if (lastHsiObsDegMagPilot != INT_MAX && hsiObsDegMagPilot != lastHsiObsDegMagPilot)
+    else if (lastHsiObsDegMagPilot != FLT_MAX && hsiObsDegMagPilot != lastHsiObsDegMagPilot)
         DisplayHeadingHint(hsiObsDegMagPilot);
-    else if (lastHsiObsDegMagCopilot != INT_MAX && hsiObsDegMagCopilot != lastHsiObsDegMagCopilot)
+    else if (lastHsiObsDegMagCopilot != FLT_MAX && hsiObsDegMagCopilot != lastHsiObsDegMagCopilot)
         DisplayHeadingHint(hsiObsDegMagCopilot);
-    else if (lastNav1ObsDegMagPilot != INT_MAX && nav1ObsDegMagPilot != lastNav1ObsDegMagPilot)
+    else if (lastNav1ObsDegMagPilot != FLT_MAX && nav1ObsDegMagPilot != lastNav1ObsDegMagPilot)
         DisplayHeadingHint(nav1ObsDegMagPilot);
-    else if (lastNav2ObsDegMagPilot != INT_MAX && nav2ObsDegMagPilot != lastNav2ObsDegMagPilot)
+    else if (lastNav2ObsDegMagPilot != FLT_MAX && nav2ObsDegMagPilot != lastNav2ObsDegMagPilot)
         DisplayHeadingHint(nav2ObsDegMagPilot);
-    else if (lastNav1ObsDegMagCopilot != INT_MAX && nav1ObsDegMagCopilot != lastNav1ObsDegMagCopilot)
+    else if (lastNav1ObsDegMagCopilot != FLT_MAX && nav1ObsDegMagCopilot != lastNav1ObsDegMagCopilot)
         DisplayHeadingHint(nav1ObsDegMagCopilot);
-    else if (lastNav2ObsDegMagCopilot != INT_MAX && nav2ObsDegMagCopilot != lastNav2ObsDegMagCopilot)
+    else if (lastNav2ObsDegMagCopilot != FLT_MAX && nav2ObsDegMagCopilot != lastNav2ObsDegMagCopilot)
         DisplayHeadingHint(nav2ObsDegMagCopilot);
+    else
+        changeDetected = 0;
+
+    if (changeDetected != 0 && ((XPLMGetElapsedTime() - lastMouseUsageTime < 1.0f) || (lastChangeDetected != 0 && forceDisplay != 0)))
+        forceDisplay = 1;
+    else
+        forceDisplay = 0;
 
     lastDgDriftVacDeg = dgDriftVacDeg;
     lastDgDriftEleDeg = dgDriftEleDeg;
@@ -197,7 +206,9 @@ static float FlightLoopCallback(float inElapsedSinceLastCall, float inElapsedTim
     lastNav1ObsDegMagCopilot = nav1ObsDegMagCopilot;
     lastNav2ObsDegMagCopilot = nav2ObsDegMagCopilot;
 
-    return -1.0f;
+    lastChangeDetected = changeDetected;
+
+    return 0.1f;
 }
 
 // draw-callback that performs the actual drawing of the hint
@@ -205,7 +216,7 @@ static int DrawCallback(XPLMDrawingPhase inPhase, int inIsBefore, void *inRefcon
 {
     float currentTime = XPLMGetElapsedTime();
 
-    if (currentTime - lastMouseUsageTime <= HINT_DURATION && currentTime - lastHintTime <= HINT_DURATION)
+    if ((currentTime - lastMouseUsageTime <= HINT_DURATION || forceDisplay != 0) && currentTime - lastHintTime <= HINT_DURATION)
     {
         float color[] = {1.0f, 1.0f, 1.0f};
         int x = 0, y = 0;
