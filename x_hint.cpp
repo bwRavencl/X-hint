@@ -311,6 +311,12 @@ PLUGIN_API int XPluginStart(char *outName, char *outSig, char *outDesc)
 
 PLUGIN_API void	XPluginStop(void)
 {
+    // unregister flight loop callbacks
+    XPLMUnregisterFlightLoopCallback(UpdateFakeWindowCallback, NULL);
+    XPLMUnregisterFlightLoopCallback(FlightLoopCallback, NULL);
+
+    // unregister draw callback
+    XPLMUnregisterDrawCallback(DrawCallback, xplm_Phase_LastCockpit, 0, NULL);
 }
 
 PLUGIN_API void XPluginDisable(void)
