@@ -79,7 +79,7 @@ static int IsPluginEnabled(const char* pluginSignature)
 static float HandleOverflow(float value, float min, float max)
 {
     float a = max - min;
-    float b = fabs(value - max);
+    float b = (float) fabs(value - max);
     float r = b - a * (float) ((int) b / (int) a);
 
     if (value < min)
