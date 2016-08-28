@@ -309,7 +309,7 @@ PLUGIN_API int XPluginStart(char *outName, char *outSig, char *outDesc)
     return 1;
 }
 
-PLUGIN_API void	XPluginStop(void)
+PLUGIN_API void XPluginStop(void)
 {
     // unregister flight loop callbacks
     XPLMUnregisterFlightLoopCallback(UpdateFakeWindowCallback, NULL);
